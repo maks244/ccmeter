@@ -155,6 +155,6 @@ def run_update():
     if rc == 0:
         print(f"updated to {latest}")
     else:
-        fallback = f"pip install -U ccmeter"
+        fallback = "pip install -U ccmeter"
         print(f"install failed (exit {rc}). try: {fallback}")
         raise SystemExit(1)
