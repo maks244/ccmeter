@@ -381,4 +381,4 @@ def _print_report(data: dict[str, Any]) -> None:
         print(f"  {c(DIM, '7d limits you to')} {c(YELLOW, f'{ratio:.0f}%')} {c(DIM, 'of theoretical 5h throughput')}")
         print()
 
-    print(f"  {c(DIM, '⚠  multi-surface usage (claude.ai + code) inflates token counts')}")
+    print(f"  {c(DIM, '⚠  claude.ai usage during a tick makes budget estimates conservative')}")
