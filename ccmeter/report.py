@@ -1,5 +1,7 @@
 """Generate calibration report by cross-referencing usage ticks against JSONL token data."""
 
+from __future__ import annotations
+
 import bisect
 import json
 import sqlite3
@@ -266,10 +268,13 @@ def _print_report(data: dict[str, Any]) -> None:
     tier = tier_label(data.get("rate_limit_tier", ""), multiplier)
 
     print()
-    print(f"  {c(BOLD + WHITE, 'ccmeter')} {c(DIM, f'v{data.get("version", "?")}')}    {c(PINK, tier)}")
-    print(
-        f"  {c(DIM, f'{data["sessions"]:,} sessions  ·  {data["token_events"]:,} events  ·  {data["usage_samples"]} samples  ·  {data["lookback_days"]}d')}"
-    )
+    ver = data.get("version", "?")
+    sessions = data["sessions"]
+    events = data["token_events"]
+    samples = data["usage_samples"]
+    lookback = data["lookback_days"]
+    print(f"  {c(BOLD + WHITE, 'ccmeter')} {c(DIM, 'v' + ver)}    {c(PINK, tier)}")
+    print(f"  {c(DIM, f'{sessions:,} sessions  ·  {events:,} events  ·  {samples} samples  ·  {lookback}d')}")
     print()
 
     if not data["buckets"]:
@@ -295,9 +300,8 @@ def _print_report(data: dict[str, Any]) -> None:
         print()
 
         if bdata["mixed_ticks"]:
-            print(
-                f"  {c(DIM, f'{pl(bdata["mixed_ticks"], "tick")} mixed models — cost stayed consistent? validates metering model')}"
-            )
+            mixed = pl(bdata["mixed_ticks"], "tick")
+            print(f"  {c(DIM, f'{mixed} mixed models — cost stayed consistent? validates metering model')}")
             print()
 
         # Per-model breakdown
@@ -326,14 +330,10 @@ def _print_report(data: dict[str, Any]) -> None:
         if act and (act.get("tool_calls") or act.get("lines_added")):
             print()
             aparts = []
-            if act.get("tool_calls"):
-                aparts.append(f"{c(WHITE, f'{act["tool_calls"]:.0f}')} {c(DIM, 'tools')}")
-            if act.get("reads"):
-                aparts.append(f"{c(WHITE, f'{act["reads"]:.0f}')} {c(DIM, 'reads')}")
-            if act.get("writes"):
-                aparts.append(f"{c(WHITE, f'{act["writes"]:.0f}')} {c(DIM, 'edits')}")
-            if act.get("bash"):
-                aparts.append(f"{c(WHITE, f'{act["bash"]:.0f}')} {c(DIM, 'bash')}")
+            for key, label in [("tool_calls", "tools"), ("reads", "reads"), ("writes", "edits"), ("bash", "bash")]:
+                v = act.get(key)
+                if v:
+                    aparts.append(f"{c(WHITE, f'{v:.0f}')} {c(DIM, label)}")
             print(f"    {c(DIM, 'per 1%:')}  {'  ·  '.join(aparts)}")
             added = act.get("lines_added", 0)
             removed = act.get("lines_removed", 0)
@@ -349,7 +349,8 @@ def _print_report(data: dict[str, Any]) -> None:
         max_from_5h = five_h["capacity"] * windows_per_week
         print(f"  {hr()}")
         print(f"  {c(DIM, 'if you maxed every 5h window:')} {c(WHITE, f'${max_from_5h:,.0f}')}{c(DIM, '/7d')}")
-        print(f"  {c(DIM, '7d cap:')} {c(WHITE, f'${seven_d["capacity"]:,.0f}')}")
+        cap_7d = seven_d["capacity"]
+        print(f"  {c(DIM, '7d cap:')} {c(WHITE, f'${cap_7d:,.0f}')}")
         ratio = seven_d["capacity"] / max_from_5h * 100
         print(f"  {c(DIM, '7d limits you to')} {c(YELLOW, f'{ratio:.0f}%')} {c(DIM, 'of theoretical 5h throughput')}")
         print()

@@ -6,7 +6,7 @@ import platform
 import sqlite3
 import sys
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -100,14 +100,14 @@ def _dict_to_activity(d: dict[str, Any]) -> ActivityEvent:
 
 def scan(days: int = 30, recache: bool = False) -> ScanResult:
     """Scan all JSONL files for token events and activity within the lookback window."""
-    cutoff = (datetime.now(tz=UTC) - timedelta(days=days)).isoformat()
+    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=days)).isoformat()
     result = ScanResult()
     seen_sessions = set()
 
     if not CLAUDE_DIR.exists():
         return result
 
-    cutoff_ts = (datetime.now(tz=UTC) - timedelta(days=days)).timestamp()
+    cutoff_ts = (datetime.now(tz=timezone.utc) - timedelta(days=days)).timestamp()
     file_stats: list[tuple[Path, os.stat_result]] = []
     for f in CLAUDE_DIR.glob("*/*.jsonl"):
         st = f.stat()

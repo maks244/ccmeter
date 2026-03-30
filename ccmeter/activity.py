@@ -1,5 +1,7 @@
 """Activity metrics: tool calls, prompts, LOC — extracted during scan, windowed later."""
 
+from __future__ import annotations
+
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any

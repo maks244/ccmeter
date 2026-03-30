@@ -1,5 +1,7 @@
 """Poll Anthropic usage API and record samples."""
 
+from __future__ import annotations
+
 import json
 import signal
 import sqlite3

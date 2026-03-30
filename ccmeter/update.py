@@ -1,5 +1,7 @@
 """Version checking and self-update."""
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
@@ -17,30 +19,30 @@ CACHE_PATH = Path.home() / ".ccmeter" / "version_check.json"
 CHECK_INTERVAL = 86400  # 24 hours
 
 
-def _fetch_latest() -> str | None:
+def _fetch_pypi() -> dict[str, Any] | None:
+    """Fetch full PyPI metadata (single request, reused for version + release)."""
     try:
         with urlopen(PYPI_URL, timeout=3) as resp:
-            data = json.loads(resp.read())
-        return data["info"]["version"]
+            return json.loads(resp.read())
     except Exception:
         return None
 
 
-def _fetch_release(version: str) -> dict[str, Any] | None:
-    """Get release metadata including wheel URL and size."""
-    try:
-        with urlopen(PYPI_URL, timeout=5) as resp:
-            data = json.loads(resp.read())
-        files = data.get("releases", {}).get(version, [])
-        for f in files:
-            if f["filename"].endswith(".whl"):
-                return f
-        for f in files:
-            if f["filename"].endswith(".tar.gz"):
-                return f
-        return None
-    except Exception:
-        return None
+def _fetch_latest() -> str | None:
+    data = _fetch_pypi()
+    return data["info"]["version"] if data else None
+
+
+def _find_release(data: dict[str, Any], version: str) -> dict[str, Any] | None:
+    """Extract release file metadata from already-fetched PyPI data."""
+    files = data.get("releases", {}).get(version, [])
+    for f in files:
+        if f["filename"].endswith(".whl"):
+            return f
+    for f in files:
+        if f["filename"].endswith(".tar.gz"):
+            return f
+    return None
 
 
 def _download(url: str, dest: Path, size: int | None):
@@ -123,29 +125,30 @@ def _install_from_file(path: Path, installer: str) -> int:
     """Install from a local wheel/sdist file, forcing cache bypass."""
     s = str(path)
     if installer == "pipx":
-        return subprocess.run(["pipx", "install", s, "--force"], capture_output=True).returncode
+        return subprocess.run(["pipx", "install", s, "--force"]).returncode
     if installer == "uv":
-        return subprocess.run(["uv", "tool", "install", s, "--force"], capture_output=True).returncode
+        return subprocess.run(["uv", "tool", "install", s, "--force"]).returncode
     return subprocess.run(
-        [sys.executable, "-m", "pip", "install", s, "--force-reinstall"], capture_output=True
+        [sys.executable, "-m", "pip", "install", s, "--force-reinstall"]
     ).returncode
 
 
 def run_update():
     """Check for updates and install latest version."""
     print(f"current: {__version__}")
-    latest = _fetch_latest()
-    if not latest:
+    data = _fetch_pypi()
+    if not data:
         print("could not reach PyPI")
         return
 
+    latest = data["info"]["version"]
     _write_cache(latest)
 
     if _version_tuple(latest) <= _version_tuple(__version__):
         print("already up to date")
         return
 
-    release = _fetch_release(latest)
+    release = _find_release(data, latest)
     if not release:
         print(f"could not find release files for {latest}")
         return
@@ -163,6 +166,10 @@ def run_update():
     if rc == 0:
         print(f"updated to {latest}")
     else:
-        fallback = "pip install -U ccmeter"
-        print(f"install failed (exit {rc}). try: {fallback}")
+        print(f"install via {installer} failed (exit {rc})")
+        if installer == "pip":
+            print("try one of:")
+            print("  pipx install ccmeter --force")
+            print("  uv tool install ccmeter --force")
+            print("  pip install -U ccmeter --break-system-packages")
         raise SystemExit(1)

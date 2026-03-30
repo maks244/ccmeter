@@ -1,9 +1,11 @@
 """Display primitives: colors, progress, formatting."""
 
+from __future__ import annotations
+
 import math
 import sys
 import time
-from datetime import UTC
+from datetime import timezone
 
 # ANSI codes
 DIM = "\033[2m"
@@ -56,17 +58,17 @@ def local_ts(iso_ts: str) -> str:
 
     utc = datetime.fromisoformat(iso_ts)
     if utc.tzinfo is None:
-        utc = utc.replace(tzinfo=UTC)
+        utc = utc.replace(tzinfo=timezone.utc)
     local = utc.astimezone()
     return local.strftime("%Y-%m-%d %H:%M")
 
 
 def ago(iso_ts: str) -> str:
     """Convert ISO timestamp to relative time: '2h ago', '3d ago'."""
-    from datetime import UTC, datetime
+    from datetime import datetime, timezone
 
     then = datetime.fromisoformat(iso_ts)
-    delta = datetime.now(tz=UTC) - then
+    delta = datetime.now(tz=timezone.utc) - then
     secs = int(delta.total_seconds())
     if secs < 60:
         return "just now"

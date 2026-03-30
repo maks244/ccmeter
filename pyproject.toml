@@ -10,13 +10,15 @@ authors = [{name = "Tyson Chan", email = "tyson.chan@proton.me"}]
 keywords = ["claude", "anthropic", "usage", "limits", "transparency", "metering"]
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: System :: Monitoring",
@@ -24,7 +26,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "fncli>=0.1.0",
+    "fncli>=0.1.1",
 ]
 
 [project.scripts]
@@ -42,7 +44,7 @@ dev = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.10"
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "strict"
