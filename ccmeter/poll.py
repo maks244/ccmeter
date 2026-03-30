@@ -114,12 +114,22 @@ def run_poll(interval: int = 120, once: bool = False):
         print(f"  resumed with {len(last_seen)} cached bucket(s)")
 
     backoff = interval
+    consecutive_failures = 0
     while _running:
         data = fetch_usage(creds)
         if data:
             last_seen = record_samples(data, last_seen, conn, tier=tier)
             backoff = interval
+            consecutive_failures = 0
         else:
+            consecutive_failures += 1
+            if consecutive_failures >= 3:
+                refreshed = get_credentials()
+                if refreshed:
+                    creds = refreshed
+                    tier = creds.subscription_type or creds.rate_limit_tier
+                    print("  refreshed credentials from keychain")
+                    consecutive_failures = 0
             backoff = min(backoff * 2, 600)
             print(f"  backing off to {backoff}s", file=sys.stderr)
 
