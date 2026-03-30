@@ -1,12 +1,22 @@
-"""Read Claude Code OAuth token from OS keychain."""
+"""Read Claude Code OAuth credentials from OS keychain."""
 
 import json
 import subprocess
 import sys
+from dataclasses import dataclass
 
 
-def get_oauth_token() -> str | None:
-    """Extract the OAuth token Claude Code stores in the OS credential store."""
+@dataclass
+class Credentials:
+    access_token: str
+    refresh_token: str | None
+    expires_at: str | None
+    subscription_type: str | None
+    rate_limit_tier: str | None
+
+
+def get_credentials() -> Credentials | None:
+    """Extract OAuth credentials Claude Code stores in the OS credential store."""
     if sys.platform == "darwin":
         return _macos_keychain()
     if sys.platform == "linux":
@@ -14,70 +24,42 @@ def get_oauth_token() -> str | None:
     return None
 
 
-def _macos_keychain() -> str | None:
-    """Read from macOS keychain where Claude Code stores credentials."""
+def _parse_credentials(raw: str) -> Credentials | None:
     try:
-        result = subprocess.run(
-            [
-                "security",
-                "find-generic-password",
-                "-s",
-                "Claude Code-credentials",
-                "-w",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    oauth = data.get("claudeAiOauth")
+    if not oauth or not isinstance(oauth, dict):
+        return None
+    token = oauth.get("accessToken")
+    if not token:
+        return None
+    return Credentials(
+        access_token=token,
+        refresh_token=oauth.get("refreshToken"),
+        expires_at=oauth.get("expiresAt"),
+        subscription_type=oauth.get("subscriptionType"),
+        rate_limit_tier=oauth.get("rateLimitTier"),
+    )
+
+
+def _run_keychain(args: list[str]) -> Credentials | None:
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, timeout=5)
         if result.returncode != 0:
             return None
-        raw = result.stdout.strip()
-        # Claude Code stores JSON with the oauth token inside
-        try:
-            data = json.loads(raw)
-            # Try common key patterns
-            for key in ("accessToken", "access_token", "token"):
-                if key in data:
-                    return data[key]
-            # If it's a nested structure, look deeper
-            if "oauth" in data:
-                oauth = data["oauth"]
-                if isinstance(oauth, dict):
-                    for key in ("accessToken", "access_token", "token"):
-                        if key in oauth:
-                            return oauth[key]
-            return None
-        except json.JSONDecodeError:
-            # Might be a raw token string
-            return raw or None
+        return _parse_credentials(result.stdout.strip())
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
 
 
-def _linux_secret() -> str | None:
-    """Read from libsecret / GNOME Keyring where Claude Code stores credentials on Linux."""
-    try:
-        result = subprocess.run(
-            [
-                "secret-tool",
-                "lookup",
-                "service",
-                "Claude Code-credentials",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0:
-            return None
-        raw = result.stdout.strip()
-        try:
-            data = json.loads(raw)
-            for key in ("accessToken", "access_token", "token"):
-                if key in data:
-                    return data[key]
-            return None
-        except json.JSONDecodeError:
-            return raw or None
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return None
+def _macos_keychain() -> Credentials | None:
+    import os
+
+    user = os.environ.get("USER", "")
+    return _run_keychain(["security", "find-generic-password", "-a", user, "-s", "Claude Code-credentials", "-w"])
+
+
+def _linux_secret() -> Credentials | None:
+    return _run_keychain(["secret-tool", "lookup", "service", "Claude Code-credentials"])

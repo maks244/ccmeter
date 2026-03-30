@@ -77,12 +77,22 @@ ccmeter optionally submits anonymized data points to a public dataset:
 
 With enough contributors, the community gets a continuously updated reference showing real token budgets per tier per bucket — and can detect cap changes within days rather than weeks of confused Reddit threads.
 
+## Requirements
+
+- Python 3.12+
+- Claude Code installed and signed in (ccmeter reads the same OAuth token Claude Code stores in your OS keychain)
+- macOS or Linux (Windows support planned)
+
+Zero external dependencies beyond [fncli](https://pypi.org/project/fncli/). Uses stdlib `urllib` for HTTP.
+
 ## Install
 
 ```bash
 pip install ccmeter
 # or
 uv pip install ccmeter
+# or just clone and run
+git clone https://github.com/iteebz/ccmeter && cd ccmeter && uv sync
 ```
 
 ## Usage
@@ -100,6 +110,12 @@ ccmeter calibrate
 # Check collection status
 ccmeter status
 ```
+
+## How it authenticates
+
+ccmeter reads the OAuth token Claude Code already stores in your OS keychain (macOS Keychain / Linux libsecret). It makes the same `api.anthropic.com/api/oauth/usage` call Claude Code makes. No additional login, no token pasting, no API keys. Your subscription tier is detected automatically from the stored credentials.
+
+**ccmeter never sends your token anywhere except Anthropic's own API.** All data stays local in `~/.ccmeter/meter.db`.
 
 ## What it is
 

@@ -40,3 +40,4 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105"]
+"ccmeter/poll.py" = ["S310"]

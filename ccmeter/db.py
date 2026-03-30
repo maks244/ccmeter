@@ -3,7 +3,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path.home() / ".cc-meter" / "meter.db"
+DB_PATH = Path.home() / ".ccmeter" / "meter.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS usage_samples (
@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS usage_samples (
     bucket      TEXT NOT NULL,
     utilization REAL NOT NULL,
     resets_at   TEXT,
+    tier        TEXT,
     raw         JSON
 );
 
