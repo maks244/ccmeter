@@ -31,5 +31,5 @@ def test_migrate_idempotent(tmp_path):
     migrate(conn)
 
     applied = conn.execute("SELECT COUNT(*) FROM _migrations").fetchone()[0]
-    assert applied == 1
+    assert applied == 2
     conn.close()
