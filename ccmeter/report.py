@@ -29,6 +29,7 @@ BUCKET_LABELS: dict[str, str] = {
     "seven_day_sonnet": "7d sonnet",
     "seven_day_opus": "7d opus",
     "seven_day_cowork": "7d cowork",
+    "extra_usage": "extra usage",
 }
 
 
@@ -174,7 +175,8 @@ def run_report(days: int = 30, json_output: bool = False):
         conn.close()
         return
 
-    buckets = ["five_hour", "seven_day", "seven_day_sonnet"]
+    buckets_row = conn.execute("SELECT DISTINCT bucket FROM usage_samples").fetchall()
+    buckets = [r["bucket"] for r in buckets_row]
     report_data: dict[str, Any] = {
         "version": __version__,
         "tier": tier,
