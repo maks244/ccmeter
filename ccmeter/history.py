@@ -3,7 +3,7 @@
 import json
 
 from ccmeter.db import connect
-from ccmeter.display import BOLD, CYAN, DIM, WHITE, YELLOW, c, hr
+from ccmeter.display import BOLD, CYAN, DIM, WHITE, YELLOW, c, hr, local_ts
 
 
 def show_history(days: int = 7, json_output: bool = False):
@@ -29,9 +29,9 @@ def show_history(days: int = 7, json_output: bool = False):
 
     prev_date = ""
     for r in rows:
-        ts = r["ts"]
-        date = ts[:10]
-        time_str = ts[11:16]
+        local = local_ts(r["ts"])
+        date = local[:10]
+        time_str = local[11:16]
 
         if date != prev_date:
             if prev_date:

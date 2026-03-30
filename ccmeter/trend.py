@@ -1,7 +1,7 @@
 """Per-tick budget history, computed from source data."""
 
 from ccmeter.db import connect
-from ccmeter.display import BOLD, DIM, GREEN, RED, WHITE, c, hr
+from ccmeter.display import BOLD, DIM, GREEN, RED, WHITE, c, hr, local_ts
 from ccmeter.report import BUCKET_LABELS, calibrate_bucket
 from ccmeter.scan import scan
 
@@ -33,8 +33,7 @@ def show_trend(days: int = 30, recache: bool = False):
         print()
 
         for i, cal in enumerate(cals):
-            ts = cal["t0"][11:16]
-            date = cal["t0"][:10]
+            local = local_ts(cal["t0"])
             budget = cal["cost_per_pct"] * 100
             delta_pct = cal["delta_pct"]
             msgs = sum(t["message_count"] for t in cal["models"].values())
@@ -48,7 +47,7 @@ def show_trend(days: int = 30, recache: bool = False):
                         delta_str = c(GREEN, f" +{shift:.0f}%") if shift > 0 else c(RED, f" {shift:.0f}%")
 
             print(
-                f"    {c(DIM, date)} {c(DIM, ts)}  {c(WHITE, f'${budget:.0f}')}"
+                f"    {c(DIM, local)}  {c(WHITE, f'${budget:.0f}')}"
                 f"  {c(DIM, f'{delta_pct:.0f}% tick')}  {c(DIM, f'{msgs} msgs')}{delta_str}"
             )
 

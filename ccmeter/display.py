@@ -3,6 +3,7 @@
 import math
 import sys
 import time
+from datetime import UTC
 
 # ANSI codes
 DIM = "\033[2m"
@@ -47,6 +48,17 @@ def human(n: int | float) -> str:
     if isinstance(n, float):
         return f"{n:.1f}"
     return str(n)
+
+
+def local_ts(iso_ts: str) -> str:
+    """Convert UTC ISO timestamp to local date + time: '2026-03-30 19:23'."""
+    from datetime import datetime
+
+    utc = datetime.fromisoformat(iso_ts)
+    if utc.tzinfo is None:
+        utc = utc.replace(tzinfo=UTC)
+    local = utc.astimezone()
+    return local.strftime("%Y-%m-%d %H:%M")
 
 
 def ago(iso_ts: str) -> str:

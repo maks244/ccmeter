@@ -242,33 +242,12 @@ def run_report(days: int = 30, json_output: bool = False, recache: bool = False)
         capacity = avg_cost * 100
         base_budget = capacity / multiplier if multiplier > 1 else capacity
 
-        # Tick-based trend: compare first half vs second half
-        tick_trend = None
-        if len(cals) >= 4:
-            mid = len(cals) // 2
-            early_avg = sum(c["cost_per_pct"] for c in cals[:mid]) / mid
-            late_avg = sum(c["cost_per_pct"] for c in cals[mid:]) / (len(cals) - mid)
-            early_budget = early_avg * 100
-            late_budget = late_avg * 100
-            if early_budget > 0:
-                shift = (late_budget - early_budget) / early_budget * 100
-                if abs(shift) >= 0.5:
-                    tick_trend = {
-                        "early": early_budget,
-                        "late": late_budget,
-                        "shift": shift,
-                        "early_ts": cals[0]["t0"],
-                        "late_ts": cals[-1]["t1"],
-                    }
-
         report_data["buckets"][bucket] = {
             "ticks": len(cals),
             "mixed_ticks": sum(1 for cc in cals if cc["mixed"]),
             "avg_cost_per_pct": avg_cost,
             "capacity": capacity,
             "base_budget": base_budget,
-            "tick_trend": tick_trend,
-            "tick_costs": [{"ts": cal["t0"], "cost_per_pct": cal["cost_per_pct"]} for cal in cals],
             "models": model_summary,
             "activity_per_pct": activity_summary,
         }
@@ -313,14 +292,6 @@ def _print_report(data: dict[str, Any]) -> None:
             budget_line += f"  {c(DIM, '=')} {c(DIM, f'{multiplier}x')} {c(DIM, 'x')} {c(WHITE, f'${base:.2f}')} {c(DIM, 'pro base')}"
         print(budget_line)
 
-        # Trend: compare early ticks vs late ticks
-        trend = bdata.get("tick_trend")
-        if trend:
-            shift = trend["shift"]
-            arrow = c(GREEN, f"+{shift:.1f}%") if shift > 0 else c(RED, f"{shift:.1f}%")
-            print(f"  {arrow} {c(DIM, f'early ${trend["early"]:.0f} → late ${trend["late"]:.0f}')}")
-        elif bdata["ticks"] >= 4:
-            print(f"  {c(DIM, 'stable across ticks')}")
         print()
 
         if bdata["mixed_ticks"]:
