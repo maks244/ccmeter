@@ -4,11 +4,13 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from ccmeter import __version__
+from ccmeter.display import progress, progress_done
 
 PYPI_URL = "https://pypi.org/pypi/ccmeter/json"
 CACHE_PATH = Path.home() / ".ccmeter" / "version_check.json"
@@ -22,6 +24,49 @@ def _fetch_latest() -> str | None:
         return data["info"]["version"]
     except Exception:
         return None
+
+
+def _fetch_release(version: str) -> dict | None:
+    """Get release metadata including wheel URL and size."""
+    try:
+        with urlopen(PYPI_URL, timeout=5) as resp:
+            data = json.loads(resp.read())
+        files = data.get("releases", {}).get(version, [])
+        for f in files:
+            if f["filename"].endswith(".whl"):
+                return f
+        for f in files:
+            if f["filename"].endswith(".tar.gz"):
+                return f
+        return None
+    except Exception:
+        return None
+
+
+def _download(url: str, dest: Path, size: int | None):
+    """Download a file with wave progress bar."""
+    tty = sys.stdout.isatty()
+    req = Request(url)
+    with urlopen(req, timeout=30) as resp:
+        total = size or int(resp.headers.get("Content-Length", 0))
+        downloaded = 0
+        chunk_size = 8192
+
+        if tty and total:
+            progress(total, 0, "download")
+
+        with dest.open("wb") as f:
+            while True:
+                chunk = resp.read(chunk_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+                downloaded += len(chunk)
+                if tty and total:
+                    progress(total, min(downloaded, total), "download")
+
+    if tty and total:
+        progress_done("download")
 
 
 def _read_cache() -> tuple[str | None, float]:
@@ -53,7 +98,7 @@ def check_version(quiet: bool = False) -> str | None:
 
     if _version_tuple(latest) > _version_tuple(__version__):
         if not quiet:
-            print(f"  update available: {__version__} -> {latest} (pip install -U ccmeter)")
+            print(f"  update available: {__version__} -> {latest} (ccmeter update)")
         return latest
     return None
 
@@ -62,21 +107,24 @@ def _version_tuple(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in v.split("."))
 
 
-def _detect_installer() -> tuple[str, list[str]]:
-    """Figure out how ccmeter was installed and return the upgrade command."""
-    exe = sys.executable
-    # pipx: executable lives in a pipx venv
-    if "pipx" in exe:
-        return "pipx", ["pipx", "upgrade", "ccmeter"]
-    # uv: check if uv is available and we're in a uv-managed env
+def _detect_installer() -> str:
+    if "pipx" in sys.executable:
+        return "pipx"
     if shutil.which("uv"):
-        return "uv", ["uv", "pip", "install", "-U", "ccmeter"]
-    # fallback: pip
-    return "pip", [sys.executable, "-m", "pip", "install", "-U", "ccmeter"]
+        return "uv"
+    return "pip"
+
+
+def _install_from_file(path: Path, installer: str) -> int:
+    if installer == "pipx":
+        return subprocess.run(["pipx", "upgrade", "ccmeter"], capture_output=True).returncode
+    if installer == "uv":
+        return subprocess.run(["uv", "pip", "install", str(path)], capture_output=True).returncode
+    return subprocess.run([sys.executable, "-m", "pip", "install", str(path)], capture_output=True).returncode
 
 
 def run_update():
-    """Check for updates and install if available."""
+    """Check for updates and install latest version."""
     print(f"current: {__version__}")
     latest = _fetch_latest()
     if not latest:
@@ -89,12 +137,24 @@ def run_update():
         print("already up to date")
         return
 
-    installer, cmd = _detect_installer()
-    print(f"updating to {latest} via {installer}...")
-    result = subprocess.run(cmd)
-    if result.returncode == 0:
+    release = _fetch_release(latest)
+    if not release:
+        print(f"could not find release files for {latest}")
+        return
+
+    installer = _detect_installer()
+    print(f"{__version__} -> {latest}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = Path(tmp) / release["filename"]
+        _download(release["url"], dest, release.get("size"))
+
+        print(f"installing via {installer}...")
+        rc = _install_from_file(dest, installer)
+
+    if rc == 0:
         print(f"updated to {latest}")
     else:
-        print(f"update failed (exit {result.returncode})")
-        print(f"try manually: {' '.join(cmd)}")
+        fallback = f"pip install -U ccmeter"
+        print(f"install failed (exit {rc}). try: {fallback}")
         raise SystemExit(1)
