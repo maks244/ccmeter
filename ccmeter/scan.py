@@ -42,7 +42,8 @@ def scan(days: int = 30) -> ScanResult:
     if not CLAUDE_DIR.exists():
         return result
 
-    files = list(CLAUDE_DIR.glob("*/*.jsonl"))
+    cutoff_ts = (datetime.now(tz=UTC) - timedelta(days=days)).timestamp()
+    files = [f for f in CLAUDE_DIR.glob("*/*.jsonl") if f.stat().st_mtime >= cutoff_ts]
     tty = sys.stdout.isatty()
     total = len(files)
 
