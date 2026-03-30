@@ -79,6 +79,38 @@ def test_calibrate_bucket_computes_tokens_per_pct(tmp_path: Path) -> None:
     conn.close()
 
 
+def test_calibrate_mixed_model_tick_sums_cost(tmp_path: Path) -> None:
+    """When opus and sonnet appear in the same tick, cost_per_pct must be their sum."""
+    db = tmp_path / "test.db"
+    conn = sqlite3.connect(str(db))
+    conn.row_factory = sqlite3.Row
+    migrate(conn)
+
+    conn.execute(
+        "INSERT INTO usage_samples (ts, bucket, utilization, tier) VALUES (?, ?, ?, ?)",
+        ("2026-03-30T02:00:00Z", "five_hour", 10.0, "max"),
+    )
+    conn.execute(
+        "INSERT INTO usage_samples (ts, bucket, utilization, tier) VALUES (?, ?, ?, ?)",
+        ("2026-03-30T02:15:00Z", "five_hour", 11.0, "max"),
+    )
+    conn.commit()
+
+    events = [
+        _make_event("2026-03-30T02:05:00Z", model="claude-opus-4-6", input_tokens=500_000),
+        _make_event("2026-03-30T02:10:00Z", model="claude-sonnet-4-6", input_tokens=500_000),
+    ]
+
+    cals = calibrate_bucket("five_hour", events, conn)
+    assert len(cals) == 1
+    assert cals[0]["mixed"]
+    opus_cost = cals[0]["models"]["claude-opus-4-6"]["cost_per_pct"]
+    sonnet_cost = cals[0]["models"]["claude-sonnet-4-6"]["cost_per_pct"]
+    assert cals[0]["cost_per_pct"] == opus_cost + sonnet_cost
+    assert opus_cost > sonnet_cost  # opus is more expensive
+    conn.close()
+
+
 def test_calibrate_skips_decreasing_utilization(tmp_path: Path) -> None:
     db = tmp_path / "test.db"
     conn = sqlite3.connect(str(db))
