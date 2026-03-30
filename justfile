@@ -17,3 +17,19 @@ test:
     uv run pytest tests/ -q
 
 ci: lint test
+
+release VERSION: ci
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VERSION="{{VERSION}}"
+    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+      echo "error: version must be semver (e.g. 0.0.2), got: $VERSION"
+      exit 1
+    fi
+    sed -i '' "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+    sed -i '' "s/^__version__ = .*/__version__ = \"$VERSION\"/" ccmeter/__init__.py
+    git commit pyproject.toml ccmeter/__init__.py -m "release(ccmeter): v$VERSION"
+    git tag "v$VERSION"
+    uv build
+    uv publish
+    echo "published ccmeter v$VERSION"
