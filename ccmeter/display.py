@@ -49,6 +49,22 @@ def human(n: int | float) -> str:
     return str(n)
 
 
+def ago(iso_ts: str) -> str:
+    """Convert ISO timestamp to relative time: '2h ago', '3d ago'."""
+    from datetime import UTC, datetime
+
+    then = datetime.fromisoformat(iso_ts)
+    delta = datetime.now(tz=UTC) - then
+    secs = int(delta.total_seconds())
+    if secs < 60:
+        return "just now"
+    if secs < 3600:
+        return f"{secs // 60}m ago"
+    if secs < 86400:
+        return f"{secs // 3600}h ago"
+    return f"{secs // 86400}d ago"
+
+
 def _color(i: int, width: int) -> str:
     t = i / max(width - 1, 1)
     r = int(_GRAD_START[0] + (_GRAD_END[0] - _GRAD_START[0]) * t)

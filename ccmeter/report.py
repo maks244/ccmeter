@@ -9,7 +9,7 @@ from ccmeter import __version__
 from ccmeter.activity import ActivityEvent, activity_in_window
 from ccmeter.auth import get_credentials
 from ccmeter.db import connect
-from ccmeter.display import BOLD, CYAN, DIM, GREEN, PINK, PURPLE, RED, WHITE, YELLOW, c, hr, human, pl
+from ccmeter.display import BOLD, CYAN, DIM, GREEN, PINK, PURPLE, RED, WHITE, YELLOW, ago, c, hr, human, pl
 from ccmeter.scan import scan
 
 # API pricing per MTok (USD).
@@ -237,12 +237,29 @@ def run_report(days: int = 30, json_output: bool = False):
         capacity = avg_cost * 100
         base_budget = capacity / multiplier if multiplier > 1 else capacity
 
+        # Fetch previous budget for trend
+        prev = conn.execute(
+            "SELECT budget, ts FROM budget_history WHERE bucket = ? ORDER BY ts DESC LIMIT 1",
+            (bucket,),
+        ).fetchone()
+        prev_budget = prev["budget"] if prev else None
+        prev_ts = prev["ts"] if prev else None
+
+        # Store this run's budget
+        conn.execute(
+            "INSERT INTO budget_history (bucket, budget, base_budget, multiplier, ticks, rate_tier) VALUES (?, ?, ?, ?, ?, ?)",
+            (bucket, capacity, base_budget, multiplier, len(cals), rate_tier),
+        )
+        conn.commit()
+
         report_data["buckets"][bucket] = {
             "ticks": len(cals),
             "mixed_ticks": sum(1 for cc in cals if cc["mixed"]),
             "avg_cost_per_pct": avg_cost,
             "capacity": capacity,
             "base_budget": base_budget,
+            "prev_budget": prev_budget,
+            "prev_ts": prev_ts,
             "models": model_summary,
             "activity_per_pct": activity_summary,
         }
@@ -282,13 +299,21 @@ def _print_report(data: dict[str, Any]) -> None:
         print(f"  {c(BOLD + WHITE, window)}  {c(DIM, pl(bdata['ticks'], 'tick'))}")
 
         # The answer: what is your budget?
-        print(f"  {c(BOLD + WHITE, f'${capacity:.2f}')} {c(DIM, 'budget')}", end="")
+        budget_line = f"  {c(BOLD + WHITE, f'${capacity:.2f}')} {c(DIM, 'budget')}"
         if multiplier > 1:
-            print(
-                f"  {c(DIM, '=')} {c(DIM, f'{multiplier}x')} {c(DIM, 'x')} {c(WHITE, f'${base:.2f}')} {c(DIM, 'pro base')}"
-            )
-        else:
-            print()
+            budget_line += f"  {c(DIM, '=')} {c(DIM, f'{multiplier}x')} {c(DIM, 'x')} {c(WHITE, f'${base:.2f}')} {c(DIM, 'pro base')}"
+        print(budget_line)
+
+        # Trend: compare to previous report
+        prev_budget = bdata.get("prev_budget")
+        prev_ts = bdata.get("prev_ts")
+        if prev_budget is not None and prev_ts:
+            delta_pct = (capacity - prev_budget) / prev_budget * 100
+            if abs(delta_pct) >= 0.5:
+                arrow = c(GREEN, f"+{delta_pct:.1f}%") if delta_pct > 0 else c(RED, f"{delta_pct:.1f}%")
+                print(f"  {arrow} {c(DIM, f'was ${prev_budget:.2f}')} {c(DIM, ago(prev_ts))}")
+            else:
+                print(f"  {c(DIM, f'stable since {ago(prev_ts)}')}")
         print()
 
         if bdata["mixed_ticks"]:
@@ -336,6 +361,19 @@ def _print_report(data: dict[str, Any]) -> None:
             removed = act.get("lines_removed", 0)
             if added or removed:
                 print(f"            {c(GREEN, f'+{added:.0f}')} / {c(RED, f'-{removed:.0f}')} {c(DIM, 'lines')}")
+        print()
+
+    # Binding constraint: 5h windows vs 7d cap
+    five_h = data["buckets"].get("five_hour")
+    seven_d = data["buckets"].get("seven_day")
+    if five_h and seven_d:
+        windows_per_week = 7 * 24 / 5  # 33.6
+        max_from_5h = five_h["capacity"] * windows_per_week
+        print(f"  {hr()}")
+        print(f"  {c(DIM, 'if you maxed every 5h window:')} {c(WHITE, f'${max_from_5h:,.0f}')}{c(DIM, '/7d')}")
+        print(f"  {c(DIM, '7d cap:')} {c(WHITE, f'${seven_d["capacity"]:,.0f}')}")
+        ratio = seven_d["capacity"] / max_from_5h * 100
+        print(f"  {c(DIM, '7d limits you to')} {c(YELLOW, f'{ratio:.0f}%')} {c(DIM, 'of theoretical 5h throughput')}")
         print()
 
     print(f"  {c(DIM, '⚠  multi-surface usage (claude.ai + code) inflates token counts')}")

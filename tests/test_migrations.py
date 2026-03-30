@@ -28,9 +28,9 @@ def test_migrate_idempotent(tmp_path: Path) -> None:
     conn = sqlite3.connect(str(db))
     conn.row_factory = sqlite3.Row
 
-    migrate(conn)
-    migrate(conn)
+    first = migrate(conn)
+    second = migrate(conn)
 
-    applied = conn.execute("SELECT COUNT(*) FROM _migrations").fetchone()[0]
-    assert applied == 2
+    assert first > 0
+    assert second == 0  # nothing new to apply
     conn.close()
