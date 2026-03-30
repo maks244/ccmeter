@@ -1,4 +1,4 @@
-"""Scan Claude Code JSONL files for per-message token usage."""
+"""Scan Claude Code JSONL files for per-message token usage and activity."""
 
 import json
 import platform
@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from ccmeter.activity import ActivityEvent, extract_activity
 from ccmeter.display import progress, progress_done
 
 CLAUDE_DIR = Path.home() / ".claude" / "projects"
@@ -27,6 +28,7 @@ class TokenEvent:
 @dataclass
 class ScanResult:
     events: list[TokenEvent] = field(default_factory=list)
+    activity: list[ActivityEvent] = field(default_factory=list)
     cc_versions: set[str] = field(default_factory=set)
     models: set[str] = field(default_factory=set)
     sessions: int = 0
@@ -34,7 +36,7 @@ class ScanResult:
 
 
 def scan(days: int = 30) -> ScanResult:
-    """Scan all JSONL files for token events within the lookback window."""
+    """Scan all JSONL files for token events and activity within the lookback window."""
     cutoff = (datetime.now(tz=UTC) - timedelta(days=days)).isoformat()
     result = ScanResult()
     seen_sessions = set()
@@ -67,44 +69,52 @@ def _scan_file(path: Path, cutoff: str, result: ScanResult, seen_sessions: set):
     try:
         with path.open() as f:
             for line in f:
-                if '"usage"' not in line:
+                if '"usage"' not in line and '"tool_use"' not in line:
                     continue
                 try:
                     d = json.loads(line)
                 except json.JSONDecodeError:
                     continue
 
-                msg = d.get("message")
-                if not isinstance(msg, dict) or "usage" not in msg:
-                    continue
-
                 ts = d.get("timestamp", "")
-                if ts < cutoff:
+                if not ts or ts < cutoff:
                     continue
 
-                usage = msg["usage"]
-                session_id = d.get("sessionId", "")
-                cc_version = d.get("version", "")
-                model = msg.get("model", "")
+                msg_type = d.get("type", "")
+                msg = d.get("message")
+                if not isinstance(msg, dict):
+                    continue
 
-                if session_id:
-                    seen_sessions.add(session_id)
-                if cc_version:
-                    result.cc_versions.add(cc_version)
-                if model:
-                    result.models.add(model)
+                # Token extraction (assistant messages with usage)
+                usage = msg.get("usage")
+                if usage:
+                    session_id = d.get("sessionId", "")
+                    cc_version = d.get("version", "")
+                    model = msg.get("model", "")
 
-                result.events.append(
-                    TokenEvent(
-                        ts=ts,
-                        input_tokens=usage.get("input_tokens", 0),
-                        output_tokens=usage.get("output_tokens", 0),
-                        cache_read=usage.get("cache_read_input_tokens", 0),
-                        cache_create=usage.get("cache_creation_input_tokens", 0),
-                        model=model,
-                        session_id=session_id,
-                        cc_version=cc_version,
+                    if session_id:
+                        seen_sessions.add(session_id)
+                    if cc_version:
+                        result.cc_versions.add(cc_version)
+                    if model:
+                        result.models.add(model)
+
+                    result.events.append(
+                        TokenEvent(
+                            ts=ts,
+                            input_tokens=usage.get("input_tokens", 0),
+                            output_tokens=usage.get("output_tokens", 0),
+                            cache_read=usage.get("cache_read_input_tokens", 0),
+                            cache_create=usage.get("cache_creation_input_tokens", 0),
+                            model=model,
+                            session_id=session_id,
+                            cc_version=cc_version,
+                        )
                     )
-                )
+
+                # Activity extraction (tool_use blocks in any message)
+                act = extract_activity(d, msg_type, msg)
+                if act:
+                    result.activity.append(act)
     except OSError:
         pass

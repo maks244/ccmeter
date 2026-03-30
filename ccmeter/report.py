@@ -4,6 +4,8 @@ import json
 import sys
 from collections import defaultdict
 
+from ccmeter import __version__
+from ccmeter.activity import ActivityEvent, activity_in_window
 from ccmeter.auth import get_credentials
 from ccmeter.db import connect
 from ccmeter.scan import scan
@@ -51,7 +53,7 @@ def tokens_in_window(events, t0: str, t1: str) -> dict[str, dict]:
     return dict(by_model)
 
 
-def calibrate_bucket(bucket: str, events, conn) -> list[dict]:
+def calibrate_bucket(bucket: str, events, conn, activity_events: list[ActivityEvent] | None = None) -> list[dict]:
     """Find utilization ticks and calculate tokens per percent per model."""
     rows = conn.execute(
         """
@@ -90,6 +92,10 @@ def calibrate_bucket(bucket: str, events, conn) -> list[dict]:
                 "message_count": tokens["count"],
             }
 
+        activity = None
+        if activity_events:
+            activity = activity_in_window(activity_events, t0, t1)
+
         calibrations.append(
             {
                 "t0": t0,
@@ -97,6 +103,7 @@ def calibrate_bucket(bucket: str, events, conn) -> list[dict]:
                 "delta_pct": delta,
                 "models": models,
                 "mixed": len(models) > 1,
+                "activity": activity,
             }
         )
     return calibrations
@@ -128,6 +135,7 @@ def run_report(days: int = 30, json_output: bool = False):
 
     buckets = ["five_hour", "seven_day", "seven_day_sonnet"]
     report_data = {
+        "version": __version__,
         "tier": tier,
         "rate_limit_tier": rate_tier,
         "os": result.os,
@@ -141,11 +149,12 @@ def run_report(days: int = 30, json_output: bool = False):
     }
 
     for bucket in buckets:
-        cals = calibrate_bucket(bucket, result.events, conn)
+        cals = calibrate_bucket(bucket, result.events, conn, activity_events=result.activity)
         if not cals:
             continue
 
         model_agg = defaultdict(lambda: {"ticks": 0, "total_per_pct": [], "cost_per_pct": []})
+        activity_agg = defaultdict(lambda: {"ticks": 0, "values": []})
         for cal in cals:
             for model, data in cal["models"].items():
                 model_agg[model]["ticks"] += 1
@@ -153,6 +162,12 @@ def run_report(days: int = 30, json_output: bool = False):
                 model_agg[model]["cost_per_pct"].append(data["cost_per_pct"])
                 for k in ("input", "output", "cache_read", "cache_create"):
                     model_agg[model].setdefault(f"{k}_per_pct", []).append(data["tokens_per_pct"][k])
+            if cal.get("activity"):
+                act = cal["activity"]
+                delta = cal["delta_pct"]
+                for k in ("prompts", "turns", "tool_calls", "reads", "writes", "bash", "lines_added", "lines_removed"):
+                    activity_agg[k]["ticks"] += 1
+                    activity_agg[k]["values"].append(act[k] / delta)
 
         model_summary = {}
         for model, agg in model_agg.items():
@@ -166,11 +181,18 @@ def run_report(days: int = 30, json_output: bool = False):
                 },
             }
 
+        activity_summary = {}
+        for k, agg in activity_agg.items():
+            n = agg["ticks"]
+            if n:
+                activity_summary[k] = round(sum(agg["values"]) / n, 1)
+
         mixed_count = sum(1 for c in cals if c["mixed"])
         report_data["buckets"][bucket] = {
             "ticks": len(cals),
             "mixed_ticks": mixed_count,
             "models": model_summary,
+            "activity_per_pct": activity_summary,
         }
 
     conn.close()
@@ -187,46 +209,68 @@ _BOLD = "\033[1m"
 _CYAN = "\033[36m"
 _GREEN = "\033[32m"
 _YELLOW = "\033[33m"
+_WHITE = "\033[37m"
 _PURPLE = "\033[38;2;160;130;220m"
+_PINK = "\033[38;2;210;140;190m"
 _RESET = "\033[0m"
+_RULE = "\033[38;2;60;60;80m"
 
 
 def _c(code: str, text: str) -> str:
     return f"{code}{text}{_RESET}" if sys.stdout.isatty() else str(text)
 
 
+def _hr(width: int = 50) -> str:
+    return _c(_RULE, "─" * width)
+
+
 def _print_report(data: dict):
     print()
-    print(f"{_c(_DIM, 'tier:')}        {_c(_BOLD, data['tier'])} {_c(_DIM, f'({data["rate_limit_tier"]})')}")
-    print(f"{_c(_DIM, 'os:')}          {data['os']}")
-    print(f"{_c(_DIM, 'cc versions:')} {', '.join(data['cc_versions']) or 'unknown'}")
-    print(f"{_c(_DIM, 'sessions:')}    {data['sessions']:,}")
-    print(f"{_c(_DIM, 'events:')}      {data['token_events']:,} token events over {data['lookback_days']}d")
-    print(f"{_c(_DIM, 'samples:')}     {data['usage_samples']}")
+    print(f"  {_c(_BOLD + _WHITE, 'ccmeter')} {_c(_DIM, f'v{data.get("version", "?")}')}    {_c(_PINK, data['tier'])} {_c(_DIM, data['rate_limit_tier'])}")
+    print(f"  {_c(_DIM, f'{data["sessions"]:,} sessions  ·  {data["token_events"]:,} events  ·  {data["usage_samples"]} samples  ·  {data["lookback_days"]}d window')}")
+    print()
 
     if not data["buckets"]:
-        print()
-        print(_c(_YELLOW, "no calibration data yet — need usage ticks that overlap with JSONL session data."))
-        print("keep ccmeter poll running while you use Claude Code.")
+        print(f"  {_c(_YELLOW, 'no calibration data yet')}")
+        print(f"  {_c(_DIM, 'need usage ticks that overlap with JSONL session data.')}")
+        print(f"  {_c(_DIM, 'keep ccmeter poll running while you use Claude Code.')}")
         return
 
-    print()
     for bucket, bdata in data["buckets"].items():
-        print(f"{_c(_BOLD, bucket)} {_c(_DIM, f'({_pl(bdata["ticks"], "tick")})')}")
+        print(f"  {_hr()}")
+        print(f"  {_c(_BOLD, bucket)} {_c(_DIM, _pl(bdata['ticks'], 'tick'))}")
+        print(f"  {_hr()}")
         if bdata["mixed_ticks"]:
-            print(f"  {_c(_YELLOW, f'⚠ {_pl(bdata["mixed_ticks"], "tick")} had mixed models — calibration is approximate')}")
+            print(f"  {_c(_YELLOW, f'⚠ {_pl(bdata["mixed_ticks"], "tick")} mixed models')}")
         for model, mdata in sorted(bdata["models"].items()):
             tpp = mdata["avg_per_pct"]
-            print(f"  {_c(_CYAN, model)} {_c(_DIM, f'({_pl(mdata["ticks"], "tick")})')}")
-            print(f"    1% ≈ {_c(_BOLD, f'{mdata["avg_total_per_pct"]:,}')} tokens")
+            act = bdata.get("activity_per_pct", {})
+            print(f"  {_c(_CYAN, model)}")
+            print()
+            print(f"    {_c(_DIM, '1%  ≈')}  {_c(_BOLD + _WHITE, f'{mdata["avg_total_per_pct"]:,}')} {_c(_DIM, 'tokens')}")
             print(
-                f"    {_c(_DIM, '     ')} "
-                f"{_c(_PURPLE, f'{tpp["input"]:,}')} {_c(_DIM, 'in')} / "
-                f"{_c(_PURPLE, f'{tpp["output"]:,}')} {_c(_DIM, 'out')} / "
-                f"{_c(_PURPLE, f'{tpp["cache_read"]:,}')} {_c(_DIM, 'cache_r')} / "
+                f"           "
+                f"{_c(_PURPLE, f'{tpp["input"]:,}')} {_c(_DIM, 'in')}  "
+                f"{_c(_PURPLE, f'{tpp["output"]:,}')} {_c(_DIM, 'out')}  "
+                f"{_c(_PURPLE, f'{tpp["cache_read"]:,}')} {_c(_DIM, 'cache_r')}  "
                 f"{_c(_PURPLE, f'{tpp["cache_create"]:,}')} {_c(_DIM, 'cache_w')}"
             )
-        print()
+            if act and (act.get("tool_calls") or act.get("lines_added")):
+                parts = []
+                if act.get("tool_calls"):
+                    parts.append(f"{_c(_WHITE, f'{act["tool_calls"]:.0f}')} {_c(_DIM, 'tool calls')}")
+                if act.get("reads"):
+                    parts.append(f"{_c(_WHITE, f'{act["reads"]:.0f}')} {_c(_DIM, 'reads')}")
+                if act.get("writes"):
+                    parts.append(f"{_c(_WHITE, f'{act["writes"]:.0f}')} {_c(_DIM, 'edits')}")
+                if act.get("bash"):
+                    parts.append(f"{_c(_WHITE, f'{act["bash"]:.0f}')} {_c(_DIM, 'bash')}")
+                print(f"           {'  ·  '.join(parts)}")
+                added = act.get("lines_added", 0)
+                removed = act.get("lines_removed", 0)
+                if added or removed:
+                    print(f"           {_c(_GREEN, f'+{added:.0f}')} / {_c(_YELLOW, f'-{removed:.0f}')} {_c(_DIM, 'lines')}")
+            print()
 
-    print(_c(_DIM, "⚠  claude.ai + claude code simultaneously = inflated token counts"))
-    print(_c(_DIM, "   (api tracks combined usage, we can only see claude code's local logs)"))
+    print(f"  {_c(_DIM, '⚠  claude.ai + claude code simultaneously = inflated counts')}")
+    print(f"  {_c(_DIM, '   api tracks combined usage; we only see local logs')}")
