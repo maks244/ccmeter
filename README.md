@@ -6,7 +6,7 @@ Measure what Anthropic won't tell you: what your Claude subscription limits actu
 
 Anthropic charges $20-$200/month for Claude but doesn't publish what the usage limits actually are. The API reports utilization as a percentage — but a percentage of what? Nobody knows.
 
-Three times in four months, Anthropic has run the same play: announce a temporary usage boost, silently tighten baseline limits during or after, then attribute complaints to "contrast effect." See [docs/evidence.md](docs/evidence.md) for the receipts.
+Twice in four months, Anthropic has run the same play: announce a temporary usage boost, silently tighten baseline limits during or after, then attribute complaints to "contrast effect." See [docs/evidence.md](docs/evidence.md) for the receipts.
 
 ccmeter is a local instrument that figures out the actual numbers.
 
@@ -75,6 +75,16 @@ ccmeter uninstall
 - **Multi-surface usage**: claude.ai, Claude Code, and Cowork share limits but only Claude Code has local token logs. If you use multiple surfaces simultaneously, token counts will be inflated relative to the utilization tick.
 - **1% granularity**: The API reports whole percentages only. More samples over longer periods = better accuracy.
 - **Bucket overlap**: Some buckets may share underlying quotas in ways the API doesn't surface.
+
+## Help
+
+One person's data is a sample. Hundreds of people's data is leverage.
+
+The more users collecting data across different tiers (Pro, Max 5x, Max 20x) and models (Sonnet, Opus), the faster we can build a complete picture of what every plan actually gets you — and detect when it changes.
+
+**Easiest way to help:** install it, let the daemon run, share your `ccmeter report` output.
+
+**If you want to contribute code:** see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
