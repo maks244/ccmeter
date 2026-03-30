@@ -16,11 +16,11 @@ from ccmeter.display import BOLD, CYAN, DIM, GREEN, PINK, PURPLE, RED, WHITE, YE
 from ccmeter.scan import scan
 
 # API pricing per MTok (USD).
-# Source: anthropic.com/pricing as of 2026-03.
+# Source: anthropic.com/pricing — Opus 4.6/Sonnet 4.6/Haiku 4.5
 PRICING = {
     "claude-opus-4-6": {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_create": 6.25},
-    "claude-sonnet-4-6": {"input": 1.50, "output": 7.50, "cache_read": 0.15, "cache_create": 1.875},
-    "claude-haiku-4-5": {"input": 0.40, "output": 2.00, "cache_read": 0.04, "cache_create": 0.50},
+    "claude-sonnet-4-6": {"input": 3.00, "output": 15.00, "cache_read": 0.30, "cache_create": 3.75},
+    "claude-haiku-4-5": {"input": 1.00, "output": 5.00, "cache_read": 0.10, "cache_create": 1.25},
 }
 
 FALLBACK_PRICING = PRICING["claude-opus-4-6"]
