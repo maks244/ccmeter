@@ -16,7 +16,7 @@ from ccmeter.display import progress, progress_done
 
 PYPI_URL = "https://pypi.org/pypi/ccmeter/json"
 CACHE_PATH = Path.home() / ".ccmeter" / "version_check.json"
-CHECK_INTERVAL = 86400  # 24 hours
+CHECK_INTERVAL = 3600  # 1 hour
 
 
 def _fetch_pypi() -> dict[str, Any] | None:
