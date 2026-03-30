@@ -8,6 +8,10 @@ from ccmeter.db import connect
 from ccmeter.scan import scan
 
 
+def _pl(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
 def tokens_in_window(events, t0: str, t1: str) -> dict[str, dict]:
     """Sum token counts per model for events between two timestamps."""
     by_model = defaultdict(lambda: {"input": 0, "output": 0, "cache_read": 0, "cache_create": 0, "count": 0})
@@ -114,7 +118,6 @@ def run_report(days: int = 30, json_output: bool = False):
         if not cals:
             continue
 
-        # aggregate per model across all ticks
         model_agg = defaultdict(lambda: {"ticks": 0, "total_per_pct": []})
         for cal in cals:
             for model, data in cal["models"].items():
@@ -167,12 +170,12 @@ def _print_report(data: dict):
 
     print()
     for bucket, bdata in data["buckets"].items():
-        print(f"{bucket} ({bdata['ticks']} ticks):")
+        print(f"{bucket} ({_pl(bdata['ticks'], 'tick')}):")
         if bdata["mixed_ticks"]:
-            print(f"  ⚠ {bdata['mixed_ticks']} tick(s) had mixed models — calibration is approximate")
+            print(f"  ⚠ {_pl(bdata['mixed_ticks'], 'tick')} had mixed models — calibration is approximate")
         for model, mdata in sorted(bdata["models"].items()):
             tpp = mdata["avg_per_pct"]
-            print(f"  {model} ({mdata['ticks']} ticks):")
+            print(f"  {model} ({_pl(mdata['ticks'], 'tick')}):")
             print(f"    1% ≈ {mdata['avg_total_per_pct']:,} tokens")
             print(
                 f"         {tpp['input']:,} input / {tpp['output']:,} output / {tpp['cache_read']:,} cache_read / {tpp['cache_create']:,} cache_create"
