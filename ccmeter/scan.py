@@ -17,7 +17,7 @@ from ccmeter.display import progress, progress_done
 CLAUDE_DIR = Path.home() / ".claude" / "projects"
 
 # Bump when parse logic changes to auto-invalidate cache.
-CACHE_VERSION = 3
+CACHE_VERSION = 2
 
 
 @dataclass
@@ -98,7 +98,7 @@ def _dict_to_activity(d: dict[str, Any]) -> ActivityEvent:
     )
 
 
-def scan(days: int = 30) -> ScanResult:
+def scan(days: int = 30, recache: bool = False) -> ScanResult:
     """Scan all JSONL files for token events and activity within the lookback window."""
     cutoff = (datetime.now(tz=UTC) - timedelta(days=days)).isoformat()
     result = ScanResult()
@@ -117,7 +117,12 @@ def scan(days: int = 30) -> ScanResult:
     total = len(file_stats)
 
     conn = connect()
-    cache = _load_cache(conn)
+    if recache:
+        conn.execute("DELETE FROM scan_cache")
+        conn.commit()
+        cache = {}
+    else:
+        cache = _load_cache(conn)
 
     if tty and total:
         progress(total, 0, "scan")

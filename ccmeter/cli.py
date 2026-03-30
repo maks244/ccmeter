@@ -22,11 +22,11 @@ def poll(interval: int = 120, once: bool = False):
 
 
 @fncli.cli("ccmeter")
-def report(days: int = 30, json: bool = False):
-    """calibration report: budget per window and trend. --json for export"""
+def report(days: int = 30, json: bool = False, recache: bool = False):
+    """calibration report: budget per window and trend. --json for export. --recache to rebuild scan cache"""
     from ccmeter.report import run_report
 
-    run_report(days=days, json_output=json)
+    run_report(days=days, json_output=json, recache=recache)
     if not json:
         from ccmeter.update import check_version
 

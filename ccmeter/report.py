@@ -152,7 +152,7 @@ def calibrate_bucket(
     return calibrations
 
 
-def run_report(days: int = 30, json_output: bool = False):
+def run_report(days: int = 30, json_output: bool = False, recache: bool = False):
     """Generate and display calibration report."""
     creds = get_credentials()
     tier = "unknown"
@@ -163,7 +163,7 @@ def run_report(days: int = 30, json_output: bool = False):
 
     multiplier = _parse_multiplier(rate_tier)
 
-    result = scan(days=days)
+    result = scan(days=days, recache=recache)
 
     if not result.events:
         print(f"no token events found in the last {days} days.")
