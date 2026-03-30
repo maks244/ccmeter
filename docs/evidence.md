@@ -14,7 +14,7 @@ On forums, Reddit, and the Claude Developers Discord, developers reported token 
 
 From March 13 through March 28, five-hour usage was doubled during off-peak hours (outside 8 AM–2 PM ET on weekdays). Framed as a thank-you for growth after a competitor boycott drove Claude to #1 on the App Store.
 
-During the same promotional period, Anthropic silently tightened peak-hour session limits. Reports started around March 23, with a $200 Max subscriber posting screenshots showing session usage climbing from 52% to 68% to 91% within minutes of a five-hour window.
+During the same promotional period, Anthropic silently tightened peak-hour session limits. Reports started around March 23, with a $200 Max subscriber [posting screenshots](https://piunikaweb.com/2026/03/24/claude-max-subscribers-left-frustrated-after-usage-limits-drained-rapidly-with-no-clear-explanation/) showing usage climbing from 52% to 91% within minutes. A [GitHub issue](https://github.com/anthropics/claude-code/issues/38335) was filed the same day. A $100/month Max 5x subscriber [debated cancelling](https://www.reddit.com/r/ClaudeCode/comments/1s3b96m/debating_getting_rid_of_my_cc_max_membership/) over "the lack of transparency on this issue specifically."
 
 The explanation came days later — not as a blog post, but a tweet thread from Thariq, one engineer. About 7% of users would now hit limits they wouldn't have before. Pro subscribers most affected.
 
