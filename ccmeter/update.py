@@ -111,9 +111,11 @@ def _version_tuple(v: str) -> tuple[int, ...]:
 
 
 def _detect_installer() -> str:
-    if "pipx" in sys.executable:
+    """Detect how ccmeter was installed by inspecting the runtime environment."""
+    exe = sys.executable
+    if "/pipx/" in exe:
         return "pipx"
-    if shutil.which("uv"):
+    if "/uv/tools/" in exe:
         return "uv"
     return "pip"
 
