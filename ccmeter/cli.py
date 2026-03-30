@@ -46,6 +46,14 @@ def status():
 
 
 @fncli.cli("ccmeter")
+def export(days: int = 30):
+    """dump anonymized calibration data for community sharing"""
+    from ccmeter.export import run_export
+
+    run_export(days=days)
+
+
+@fncli.cli("ccmeter")
 def install():
     """install ccmeter as a background daemon (survives restarts)"""
     from ccmeter.daemon import install as do_install
