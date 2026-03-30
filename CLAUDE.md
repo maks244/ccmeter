@@ -71,3 +71,16 @@ just ci                    # lint + typecheck + test
 `uv run ccmeter` runs the local dev version from source. `ccmeter` in PATH should point to the latest PyPI release (via `pip install ccmeter` or `uv tool install ccmeter`). Never symlink dev into PATH.
 
 Test against real data — the tool reads from your local `~/.claude/` and OS keychain. No mocks needed for integration testing. Unit tests should mock the keychain and API calls.
+
+## Commit messages
+
+Format: `tag(scope): verb object` — scope is the **module**, not the project. `ccmeter` is never a useful scope because everything is ccmeter.
+
+Good scopes: `poll`, `scan`, `report`, `status`, `auth`, `daemon`, `display`, `activity`, `trend`, `history`, `update`, `db`. Omit scope for cross-cutting changes.
+
+```
+fix(poll): status-aware retry instead of blind exponential backoff
+feat(status): add collection health
+fix(scan): compress cache with zlib
+refactor: tighten types and fix code quality nits
+```
