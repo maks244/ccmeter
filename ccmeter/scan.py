@@ -67,6 +67,8 @@ def _scan_file(path: Path, cutoff: str, result: ScanResult, seen_sessions: set):
     try:
         with path.open() as f:
             for line in f:
+                if '"usage"' not in line:
+                    continue
                 try:
                     d = json.loads(line)
                 except json.JSONDecodeError:

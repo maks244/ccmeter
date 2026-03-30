@@ -1,6 +1,7 @@
 """Generate calibration report by cross-referencing usage ticks against JSONL token data."""
 
 import json
+import sys
 from collections import defaultdict
 
 from ccmeter.auth import get_credentials
@@ -181,35 +182,52 @@ def run_report(days: int = 30, json_output: bool = False):
     _print_report(report_data)
 
 
+_DIM = "\033[2m"
+_BOLD = "\033[1m"
+_CYAN = "\033[36m"
+_GREEN = "\033[32m"
+_YELLOW = "\033[33m"
+_PURPLE = "\033[38;2;160;130;220m"
+_RESET = "\033[0m"
+
+
+def _c(code: str, text: str) -> str:
+    return f"{code}{text}{_RESET}" if sys.stdout.isatty() else str(text)
+
+
 def _print_report(data: dict):
     print()
-    print(f"tier:        {data['tier']} ({data['rate_limit_tier']})")
-    print(f"os:          {data['os']}")
-    print(f"cc versions: {', '.join(data['cc_versions']) or 'unknown'}")
-    print(f"sessions:    {data['sessions']}")
-    print(f"events:      {data['token_events']} token events over {data['lookback_days']}d")
-    print(f"samples:     {data['usage_samples']} usage ticks")
+    print(f"{_c(_DIM, 'tier:')}        {_c(_BOLD, data['tier'])} {_c(_DIM, f'({data["rate_limit_tier"]})')}")
+    print(f"{_c(_DIM, 'os:')}          {data['os']}")
+    print(f"{_c(_DIM, 'cc versions:')} {', '.join(data['cc_versions']) or 'unknown'}")
+    print(f"{_c(_DIM, 'sessions:')}    {data['sessions']:,}")
+    print(f"{_c(_DIM, 'events:')}      {data['token_events']:,} token events over {data['lookback_days']}d")
+    print(f"{_c(_DIM, 'samples:')}     {data['usage_samples']} usage ticks")
 
     if not data["buckets"]:
         print()
-        print("no calibration data yet — need usage ticks that overlap with JSONL session data.")
+        print(_c(_YELLOW, "no calibration data yet — need usage ticks that overlap with JSONL session data."))
         print("keep ccmeter poll running while you use Claude Code.")
         return
 
     print()
     for bucket, bdata in data["buckets"].items():
-        print(f"{bucket} ({_pl(bdata['ticks'], 'tick')}):")
+        print(f"{_c(_BOLD, bucket)} {_c(_DIM, f'({_pl(bdata["ticks"], "tick")})')}")
         if bdata["mixed_ticks"]:
-            print(f"  ⚠ {_pl(bdata['mixed_ticks'], 'tick')} had mixed models — calibration is approximate")
+            print(f"  {_c(_YELLOW, f'⚠ {_pl(bdata["mixed_ticks"], "tick")} had mixed models — calibration is approximate')}")
         for model, mdata in sorted(bdata["models"].items()):
             tpp = mdata["avg_per_pct"]
             cost = mdata["avg_cost_per_pct"]
-            print(f"  {model} ({_pl(mdata['ticks'], 'tick')}):")
-            print(f"    1% ≈ {mdata['avg_total_per_pct']:,} tokens (${cost:.2f} at API rates)")
+            print(f"  {_c(_CYAN, model)} {_c(_DIM, f'({_pl(mdata["ticks"], "tick")})')}")
+            print(f"    1% ≈ {_c(_BOLD, f'{mdata["avg_total_per_pct"]:,}')} tokens {_c(_GREEN, f'(${cost:.2f} at API rates)')}")
             print(
-                f"         {tpp['input']:,} input / {tpp['output']:,} output / {tpp['cache_read']:,} cache_read / {tpp['cache_create']:,} cache_create"
+                f"    {_c(_DIM, '     ')} "
+                f"{_c(_PURPLE, f'{tpp["input"]:,}')} {_c(_DIM, 'in')} / "
+                f"{_c(_PURPLE, f'{tpp["output"]:,}')} {_c(_DIM, 'out')} / "
+                f"{_c(_PURPLE, f'{tpp["cache_read"]:,}')} {_c(_DIM, 'cache_r')} / "
+                f"{_c(_PURPLE, f'{tpp["cache_create"]:,}')} {_c(_DIM, 'cache_w')}"
             )
         print()
 
-    print("⚠  claude.ai + claude code simultaneously = inflated token counts")
-    print("   (api tracks combined usage, we can only see claude code's local logs)")
+    print(_c(_DIM, "⚠  claude.ai + claude code simultaneously = inflated token counts"))
+    print(_c(_DIM, "   (api tracks combined usage, we can only see claude code's local logs)"))
