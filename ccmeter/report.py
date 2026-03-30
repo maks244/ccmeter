@@ -202,7 +202,7 @@ def _print_report(data: dict):
     print(f"{_c(_DIM, 'cc versions:')} {', '.join(data['cc_versions']) or 'unknown'}")
     print(f"{_c(_DIM, 'sessions:')}    {data['sessions']:,}")
     print(f"{_c(_DIM, 'events:')}      {data['token_events']:,} token events over {data['lookback_days']}d")
-    print(f"{_c(_DIM, 'samples:')}     {data['usage_samples']} usage ticks")
+    print(f"{_c(_DIM, 'samples:')}     {data['usage_samples']}")
 
     if not data["buckets"]:
         print()
