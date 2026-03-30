@@ -27,6 +27,10 @@ def report(days: int = 30, json: bool = False):
     from ccmeter.report import run_report
 
     run_report(days=days, json_output=json)
+    if not json:
+        from ccmeter.update import check_version
+
+        check_version()
 
 
 @fncli.cli("ccmeter")
@@ -43,6 +47,17 @@ def status():
     from ccmeter.status import show_status
 
     show_status()
+    from ccmeter.update import check_version
+
+    check_version()
+
+
+@fncli.cli("ccmeter")
+def update():
+    """check for updates and install latest version"""
+    from ccmeter.update import run_update
+
+    run_update()
 
 
 @fncli.cli("ccmeter")
