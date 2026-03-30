@@ -17,7 +17,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "fncli" }]
+requires-dist = [{ name = "fncli", specifier = ">=0.1.0" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -36,11 +36,11 @@ wheels = [
 
 [[package]]
 name = "fncli"
-version = "0.0.1"
+version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/74/97/55543a2f0854571a6d3ca9c87e1c0986c7599bc4d7490026ba7b156d15ba/fncli-0.0.1.tar.gz", hash = "sha256:1408b7e3031a2b0637d4a6c1f0f852a6169432d29a09e41a97d448a5c2cd20bb", size = 2230, upload-time = "2026-02-22T08:27:49.453Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/95/595bbf4f4478481123d9e27b8a99457dd09308fa4a04ea0c3ac690231127/fncli-0.1.0.tar.gz", hash = "sha256:568c8098ed7b35b02aea853ec42192331ef73ed0975ea8ec86db1b3437e1873e", size = 20996, upload-time = "2026-03-30T04:58:46.322Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/81/300be30b0492b0a8d7bd7a59c01bb902d1b47863af4ea72cd174652ed21a/fncli-0.0.1-py3-none-any.whl", hash = "sha256:99493151288c1c7fde464a23c4645d2c330f2bb968c35489b02cafd907c30328", size = 2659, upload-time = "2026-02-22T08:27:48.397Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/0b/18ff4625e09c0127d75d34900f6eaa661d1155d7a34e4c7746ae9d0795fd/fncli-0.1.0-py3-none-any.whl", hash = "sha256:fc5cb06b2368bdbf5e221e890a4430e8a442f1d79617f0f68840c40a085cc96a", size = 8644, upload-time = "2026-03-30T04:58:45.185Z" },
 ]
 
 [[package]]

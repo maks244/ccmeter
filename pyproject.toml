@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "fncli",
+    "fncli>=0.1.0",
 ]
 
 [project.scripts]
