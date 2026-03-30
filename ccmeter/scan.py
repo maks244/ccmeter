@@ -2,9 +2,12 @@
 
 import json
 import platform
+import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+from ccmeter.display import progress, progress_done
 
 CLAUDE_DIR = Path.home() / ".claude" / "projects"
 
@@ -39,8 +42,20 @@ def scan(days: int = 30) -> ScanResult:
     if not CLAUDE_DIR.exists():
         return result
 
-    for jsonl in CLAUDE_DIR.glob("*/*.jsonl"):
+    files = list(CLAUDE_DIR.glob("*/*.jsonl"))
+    tty = sys.stdout.isatty()
+    total = len(files)
+
+    if tty and total:
+        progress(total, 0, "scan")
+
+    for i, jsonl in enumerate(files):
         _scan_file(jsonl, cutoff, result, seen_sessions)
+        if tty and total:
+            progress(total, i + 1, "scan")
+
+    if tty and total:
+        progress_done("scan")
 
     result.sessions = len(seen_sessions)
     result.events.sort(key=lambda e: e.ts)

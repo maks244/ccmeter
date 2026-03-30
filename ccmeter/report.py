@@ -83,7 +83,6 @@ def run_report(days: int = 30, json_output: bool = False):
         tier = creds.subscription_type or "unknown"
         rate_tier = creds.rate_limit_tier or "unknown"
 
-    print("scanning JSONL files...")
     result = scan(days=days)
 
     if not result.events:
