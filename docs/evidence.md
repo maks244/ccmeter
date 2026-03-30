@@ -10,15 +10,7 @@ A Max plan subscriber who'd rarely hit limits filed a GitHub bug report on Janua
 
 On forums, Reddit, and the Claude Developers Discord, developers reported token consumption suddenly increasing, with accounts reaching maximum within minutes or hours on tasks that previously worked fine.
 
-## Incident 2: Third-party tool crackdown (January 9, 2026)
-
-On January 9 at 02:20 UTC, Anthropic deployed safeguards blocking third-party tools using subscription OAuth tokens. No warning. No migration path.
-
-Tools like OpenCode had been using subscription tokens to access Claude at flat rates rather than metered API pricing. The economic gap: a month of heavy Claude Code usage can easily exceed $1,000 via API.
-
-DHH called the move "very customer hostile." Some users reported being banned within 20 minutes of starting a task on the $200/month Max plan. Anthropic later reversed erroneous bans.
-
-## Incident 3: March 2x off-peak promo → simultaneous silent nerf (Mar 13–28, 2026)
+## Incident 2: March 2x off-peak promo → simultaneous silent nerf (Mar 13–28, 2026)
 
 From March 13 through March 28, five-hour usage was doubled during off-peak hours (outside 8 AM–2 PM ET on weekdays). Framed as a thank-you for growth after a competitor boycott drove Claude to #1 on the App Store.
 
@@ -28,7 +20,7 @@ The explanation came days later — not as a blog post, but a tweet thread from 
 
 ## The pattern
 
-Same structure every time:
+Same structure both times:
 
 1. Announce generous temporary promotion
 2. Silently tighten baseline limits during or immediately after the promotion window
