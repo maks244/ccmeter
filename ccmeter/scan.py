@@ -1,6 +1,7 @@
 """Scan Claude Code JSONL files for per-message token usage and activity."""
 
 import json
+import os
 import platform
 import sqlite3
 import sys
@@ -107,9 +108,13 @@ def scan(days: int = 30) -> ScanResult:
         return result
 
     cutoff_ts = (datetime.now(tz=UTC) - timedelta(days=days)).timestamp()
-    files = [f for f in CLAUDE_DIR.glob("*/*.jsonl") if f.stat().st_mtime >= cutoff_ts]
+    file_stats: list[tuple[Path, os.stat_result]] = []
+    for f in CLAUDE_DIR.glob("*/*.jsonl"):
+        st = f.stat()
+        if st.st_mtime >= cutoff_ts:
+            file_stats.append((f, st))
     tty = sys.stdout.isatty()
-    total = len(files)
+    total = len(file_stats)
 
     conn = connect()
     cache = _load_cache(conn)
@@ -118,9 +123,8 @@ def scan(days: int = 30) -> ScanResult:
         progress(total, 0, "scan")
 
     new_cache: list[tuple[str, float, int, int, str, str]] = []
-    for i, jsonl in enumerate(files):
+    for i, (jsonl, st) in enumerate(file_stats):
         key = str(jsonl)
-        st = jsonl.stat()
         cached = cache.get(key)
 
         if cached and cached[0] == st.st_mtime and cached[1] == st.st_size:
