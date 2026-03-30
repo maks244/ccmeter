@@ -23,7 +23,7 @@ def poll(interval: int = 120, once: bool = False):
 
 @fncli.cli("ccmeter")
 def report(days: int = 30, json: bool = False):
-    """show calibration report: what does 1% actually cost in tokens"""
+    """calibration report: budget per window and trend. --json for export"""
     from ccmeter.report import run_report
 
     run_report(days=days, json_output=json)
@@ -58,14 +58,6 @@ def update():
     from ccmeter.update import run_update
 
     run_update()
-
-
-@fncli.cli("ccmeter")
-def export(days: int = 30):
-    """dump anonymized calibration data for community sharing"""
-    from ccmeter.export import run_export
-
-    run_export(days=days)
 
 
 @fncli.cli("ccmeter")

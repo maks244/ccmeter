@@ -16,7 +16,6 @@ ccmeter/
   history.py — display raw usage samples
   status.py  — collection health and per-bucket current state
   daemon.py  — launchd (macOS) / systemd (Linux) install/uninstall
-  export.py  — anonymized calibration data for community sharing
   update.py  — version checking and self-update from PyPI
   migrations/ — sqlite schema migrations (001_initial, 002_scan_cache)
 docs/
