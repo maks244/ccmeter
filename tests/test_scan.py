@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-from ccmeter.scan import _scan_file
+from ccmeter.scan import scan_file
 
 
-def _write_jsonl(path: Path, lines: list[dict]) -> None:
+def _write_jsonl(path: Path, lines: list[dict[str, object]]) -> None:
     with path.open("w") as f:
         for line in lines:
             f.write(json.dumps(line) + "\n")
@@ -35,7 +35,7 @@ def test_user_prompts_captured_without_tool_use(tmp_path: Path) -> None:
         ],
     )
 
-    events, activity = _scan_file(jsonl, "2026-03-30T00:00:00Z")
+    events, activity = scan_file(jsonl, "2026-03-30T00:00:00Z")
     assert len(events) == 1  # assistant message with usage
     assert len(activity) == 2  # user prompt + assistant turn
     assert activity[0].prompts == 1
@@ -62,7 +62,7 @@ def test_tool_use_lines_produce_activity(tmp_path: Path) -> None:
         ],
     )
 
-    events, activity = _scan_file(jsonl, "2026-03-30T00:00:00Z")
+    events, activity = scan_file(jsonl, "2026-03-30T00:00:00Z")
     assert len(events) == 1
     assert len(activity) == 1
     assert activity[0].reads == 1
@@ -87,6 +87,6 @@ def test_lines_before_cutoff_skipped(tmp_path: Path) -> None:
         ],
     )
 
-    events, activity = _scan_file(jsonl, "2026-03-29T00:00:00Z")
+    events, activity = scan_file(jsonl, "2026-03-29T00:00:00Z")
     assert len(events) == 0
     assert len(activity) == 0

@@ -34,22 +34,22 @@ BUCKET_LABELS: dict[str, str] = {
 }
 
 
-def _pricing_for(model: str) -> dict[str, float]:
+def pricing_for(model: str) -> dict[str, float]:
     for prefix, rates in PRICING.items():
         if model.startswith(prefix):
             return rates
     return FALLBACK_PRICING
 
 
-def _cost_usd(tokens: dict[str, int], model: str) -> float:
+def cost_usd(tokens: dict[str, int], model: str) -> float:
     """Compute cost in USD for a token breakdown."""
-    rates = _pricing_for(model)
+    rates = pricing_for(model)
     return sum(
         tokens.get(k, 0) * rates.get(k, 0) / 1_000_000 for k in ("input", "output", "cache_read", "cache_create")
     )
 
 
-def _parse_multiplier(rate_limit_tier: str) -> int:
+def parse_multiplier(rate_limit_tier: str) -> int:
     """Extract tier multiplier from rate_limit_tier string. e.g. 'default_claude_max_20x' → 20."""
     if "_max_" in rate_limit_tier and rate_limit_tier.endswith("x"):
         try:
@@ -59,7 +59,7 @@ def _parse_multiplier(rate_limit_tier: str) -> int:
     return 1
 
 
-def _tier_label(rate_limit_tier: str, multiplier: int) -> str:
+def tier_label(rate_limit_tier: str, multiplier: int) -> str:
     if multiplier > 1:
         return f"max {multiplier}x"
     if "pro" in rate_limit_tier:
@@ -122,7 +122,7 @@ def calibrate_bucket(
         for model, tokens in by_model.items():
             total = tokens["input"] + tokens["output"] + tokens["cache_read"] + tokens["cache_create"]
             tpp = {k: int(v / delta) for k, v in tokens.items() if k != "count"}
-            cost = _cost_usd(tpp, model)
+            cost = cost_usd(tpp, model)
             tick_cost += cost
             cache_total = tokens["cache_read"] + tokens["cache_create"]
             models[model] = {
@@ -161,7 +161,7 @@ def run_report(days: int = 30, json_output: bool = False, recache: bool = False)
         tier = creds.subscription_type or "unknown"
         rate_tier = creds.rate_limit_tier or "unknown"
 
-    multiplier = _parse_multiplier(rate_tier)
+    multiplier = parse_multiplier(rate_tier)
 
     result = scan(days=days, recache=recache)
 
@@ -263,7 +263,7 @@ def run_report(days: int = 30, json_output: bool = False, recache: bool = False)
 
 def _print_report(data: dict[str, Any]) -> None:
     multiplier = data.get("multiplier", 1)
-    tier = _tier_label(data.get("rate_limit_tier", ""), multiplier)
+    tier = tier_label(data.get("rate_limit_tier", ""), multiplier)
 
     print()
     print(f"  {c(BOLD + WHITE, 'ccmeter')} {c(DIM, f'v{data.get("version", "?")}')}    {c(PINK, tier)}")

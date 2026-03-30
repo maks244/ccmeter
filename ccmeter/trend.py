@@ -1,7 +1,7 @@
 """Per-tick budget chart, computed from source data."""
 
 from ccmeter.db import connect
-from ccmeter.display import BOLD, DIM, RESET, WHITE, _color, c, hr, local_ts
+from ccmeter.display import BOLD, DIM, RESET, WHITE, c, gradient, hr, local_ts
 from ccmeter.report import BUCKET_LABELS, calibrate_bucket
 from ccmeter.scan import scan
 
@@ -70,7 +70,7 @@ def _chart(values: list[float], width: int = CHART_WIDTH, height: int = CHART_HE
                     dy = (height - 1 - row) * 4 + (3 - dr)
                     if (dx, dy) in grid:
                         code |= _DOT_MAP[dr][dc]
-            color = _color(col, width)
+            color = gradient(col, width)
             chars.append(f"{color}{chr(code)}{RESET}")
         rows.append("".join(chars))
     return rows

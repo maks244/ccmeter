@@ -135,7 +135,7 @@ def scan(days: int = 30, recache: bool = False) -> ScanResult:
         if cached and cached[0] == st.st_mtime and cached[1] == st.st_size:
             events, activity = cached[2], cached[3]
         else:
-            events, activity = _scan_file(jsonl, cutoff)
+            events, activity = scan_file(jsonl, cutoff)
             new_cache.append(
                 (
                     key,
@@ -207,7 +207,7 @@ def _save_cache(conn: sqlite3.Connection, entries: list[tuple[str, float, int, i
     conn.commit()
 
 
-def _scan_file(path: Path, cutoff: str) -> tuple[list[TokenEvent], list[ActivityEvent]]:
+def scan_file(path: Path, cutoff: str) -> tuple[list[TokenEvent], list[ActivityEvent]]:
     events = []
     activity = []
     try:

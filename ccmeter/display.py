@@ -77,7 +77,7 @@ def ago(iso_ts: str) -> str:
     return f"{secs // 86400}d ago"
 
 
-def _color(i: int, width: int) -> str:
+def gradient(i: int, width: int) -> str:
     t = i / max(width - 1, 1)
     r = int(_GRAD_START[0] + (_GRAD_END[0] - _GRAD_START[0]) * t)
     g = int(_GRAD_START[1] + (_GRAD_END[1] - _GRAD_START[1]) * t)
@@ -87,7 +87,7 @@ def _color(i: int, width: int) -> str:
 
 def _wave(pct: float, width: int = WIDTH) -> str:
     if pct >= 1.0:
-        return "".join(f"{_color(i, width)}█" for i in range(width)) + RESET
+        return "".join(f"{gradient(i, width)}█" for i in range(width)) + RESET
     filled = int(pct * width)
     t = time.time()
     heights = " ▁▂▃▄▅▆▇█"
@@ -95,7 +95,7 @@ def _wave(pct: float, width: int = WIDTH) -> str:
     for i in range(width):
         if i < filled:
             wave = math.sin(t * 6 + i * 0.4) * 0.3 + 0.7
-            bar += f"{_color(i, width)}{heights[int(wave * 8)]}"
+            bar += f"{gradient(i, width)}{heights[int(wave * 8)]}"
         else:
             bar += f"{RESET} "
     return bar + RESET
