@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 import signal
 import sqlite3
 import sys
@@ -11,10 +13,13 @@ import types
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ccmeter.auth import Credentials, get_credentials
 from ccmeter.db import connect
+
+PIDFILE = Path.home() / ".ccmeter" / "poll.pid"
 
 USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
 BETA_HEADER = "oauth-2025-04-20"
@@ -125,8 +130,24 @@ def _next_delay(result: PollResult, interval: int, backoff: int) -> int:
     return min(backoff * 2, 300)
 
 
+def _acquire_lock() -> Any:
+    """Acquire exclusive pidfile lock. Returns file handle or exits."""
+    PIDFILE.parent.mkdir(parents=True, exist_ok=True)
+    f = PIDFILE.open("w")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print("error: another ccmeter poll is already running", file=sys.stderr)
+        f.close()
+        sys.exit(1)
+    f.write(str(os.getpid()))
+    f.flush()
+    return f
+
+
 def run_poll(interval: int = 120, once: bool = False):
     """Main poll loop."""
+    lock = _acquire_lock()
     creds = get_credentials()
     if not creds:
         print("error: could not find Claude Code OAuth token in OS keychain", file=sys.stderr)
@@ -186,4 +207,5 @@ def run_poll(interval: int = 120, once: bool = False):
         time.sleep(backoff)
 
     conn.close()
+    lock.close()
     print("stopped.")
