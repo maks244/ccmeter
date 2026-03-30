@@ -91,8 +91,8 @@ def run_poll(interval: int = 120, once: bool = False):
     token = get_oauth_token()
     if not token:
         print("error: could not find Claude Code OAuth token in OS keychain", file=sys.stderr)
-        print("", file=sys.stderr)
-        print("cc-meter reads the same credential Claude Code uses.", file=sys.stderr)
+        print(file=sys.stderr)
+        print("ccmeter reads the same credential Claude Code uses.", file=sys.stderr)
         print("make sure Claude Code is installed and you've signed in.", file=sys.stderr)
         sys.exit(1)
 
@@ -102,7 +102,7 @@ def run_poll(interval: int = 120, once: bool = False):
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
-    print(f"cc-meter polling every {interval}s")
+    print(f"ccmeter polling every {interval}s")
     if last_seen:
         print(f"  resumed with {len(last_seen)} cached bucket(s)")
 

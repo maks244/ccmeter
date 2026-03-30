@@ -29,7 +29,7 @@ def run_calibrate(bucket: str = "five_hour"):
     if not rows:
         print(f"no calibration data for {bucket} yet.")
         print("need at least two samples where utilization increased.")
-        print("run: cc-meter poll")
+        print("run: ccmeter poll")
         return
 
     print(f"calibration data for {bucket}")
@@ -45,4 +45,4 @@ def run_calibrate(bucket: str = "five_hour"):
     print(f"\n{len(rows)} tick(s) recorded")
     print("\ntoken cross-referencing requires JSONL session parsing (coming soon)")
     print("for now: correlate these windows against your Claude Code session logs")
-    print(f"  logs: ~/.claude/projects/*/")
+    print("  logs: ~/.claude/projects/*/")

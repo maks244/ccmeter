@@ -15,7 +15,7 @@ def show_history(days: int = 7, json_output: bool = False):
     conn.close()
 
     if not rows:
-        print(f"no samples in the last {days} days. run: cc-meter poll")
+        print(f"no samples in the last {days} days. run: ccmeter poll")
         return
 
     if json_output:

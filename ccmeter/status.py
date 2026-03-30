@@ -5,7 +5,7 @@ from ccmeter.db import DB_PATH, connect
 
 def show_status():
     if not DB_PATH.exists():
-        print("no data collected yet. run: cc-meter poll")
+        print("no data collected yet. run: ccmeter poll")
         return
 
     conn = connect()
@@ -17,7 +17,7 @@ def show_status():
 
     conn.close()
 
-    print("cc-meter status")
+    print("ccmeter status")
     print(f"  db: {DB_PATH}")
     print(f"  samples: {total}")
     print(f"  buckets: {', '.join(r['bucket'] for r in buckets)}")

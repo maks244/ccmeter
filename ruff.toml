@@ -34,6 +34,8 @@ ignore = [
     "S104",     # binding to all interfaces
     "S603",     # subprocess calls intentional
     "S607",     # partial executable path
+    "T201",     # print() is the CLI output primitive
+    "PLC0415",  # deferred imports for fast CLI startup
 ]
 
 [lint.per-file-ignores]

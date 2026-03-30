@@ -46,4 +46,4 @@ def status():
 
 
 def main():
-    fncli.run(["ccmeter", *sys.argv[1:]])
+    raise SystemExit(fncli.dispatch(["ccmeter", *sys.argv[1:]]))

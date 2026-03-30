@@ -49,7 +49,7 @@ def _macos_keychain() -> str | None:
             return None
         except json.JSONDecodeError:
             # Might be a raw token string
-            return raw if raw else None
+            return raw or None
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
 
@@ -78,6 +78,6 @@ def _linux_secret() -> str | None:
                     return data[key]
             return None
         except json.JSONDecodeError:
-            return raw if raw else None
+            return raw or None
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
