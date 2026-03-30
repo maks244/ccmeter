@@ -57,6 +57,11 @@ def _install_launchd(ccmeter_bin: str) -> int:
             <true/>
             <key>KeepAlive</key>
             <true/>
+            <key>EnvironmentVariables</key>
+            <dict>
+                <key>PYTHONUNBUFFERED</key>
+                <string>1</string>
+            </dict>
             <key>StandardOutPath</key>
             <string>{Path.home()}/.ccmeter/poll.log</string>
             <key>StandardErrorPath</key>
