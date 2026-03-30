@@ -5,6 +5,7 @@ import os
 import platform
 import sqlite3
 import sys
+import zlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -17,7 +18,7 @@ from ccmeter.display import progress, progress_done
 CLAUDE_DIR = Path.home() / ".claude" / "projects"
 
 # Bump when parse logic changes to auto-invalidate cache.
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 
 
 @dataclass
@@ -131,7 +132,7 @@ def scan(days: int = 30, recache: bool = False) -> ScanResult:
     if tty and total:
         progress(total, 0, "scan")
 
-    new_cache: list[tuple[str, float, int, int, str, str]] = []
+    new_cache: list[tuple[str, float, int, int, bytes, bytes]] = []
     for i, (jsonl, st) in enumerate(file_stats):
         key = str(jsonl)
         cached = cache.get(key)
@@ -146,8 +147,8 @@ def scan(days: int = 30, recache: bool = False) -> ScanResult:
                     st.st_mtime,
                     st.st_size,
                     CACHE_VERSION,
-                    json.dumps([_token_to_dict(e) for e in events]),
-                    json.dumps([_activity_to_dict(a) for a in activity]),
+                    zlib.compress(json.dumps([_token_to_dict(e) for e in events]).encode()),
+                    zlib.compress(json.dumps([_activity_to_dict(a) for a in activity]).encode()),
                 )
             )
 
@@ -188,14 +189,24 @@ def _load_cache(conn: sqlite3.Connection) -> dict[str, tuple[float, int, list[To
     if stale:
         conn.execute("DELETE FROM scan_cache")
         conn.commit()
+        conn.execute("VACUUM")
         return {}
 
     rows = conn.execute("SELECT path, mtime, size, events, activity FROM scan_cache").fetchall()
     cache = {}
     for row in rows:
         try:
-            events = [_dict_to_token(d) for d in json.loads(row["events"])]
-            activity = [_dict_to_activity(d) for d in json.loads(row["activity"])]
+            raw_events = row["events"]
+            raw_activity = row["activity"]
+            # Decompress if stored as bytes (v3+), otherwise parse as JSON string (v2)
+            if isinstance(raw_events, bytes):
+                events_json = zlib.decompress(raw_events).decode()
+                activity_json = zlib.decompress(raw_activity).decode()
+            else:
+                events_json = raw_events
+                activity_json = raw_activity
+            events = [_dict_to_token(d) for d in json.loads(events_json)]
+            activity = [_dict_to_activity(d) for d in json.loads(activity_json)]
             cache[row["path"]] = (row["mtime"], row["size"], events, activity)
         except Exception:  # noqa: S112, PERF203
             continue
