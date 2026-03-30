@@ -33,10 +33,9 @@ release VERSION: ci
       echo "error: tag v$VERSION already exists"
       exit 1
     fi
-    sed -i '' "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
     sed -i '' "s/^__version__ = .*/__version__ = \"$VERSION\"/" ccmeter/__init__.py
-    git diff --quiet pyproject.toml ccmeter/__init__.py || \
-      git commit pyproject.toml ccmeter/__init__.py -m "release(ccmeter): v$VERSION"
+    uv lock
+    git commit ccmeter/__init__.py uv.lock -m "release(ccmeter): v$VERSION"
     git tag "v$VERSION"
     rm -rf dist
     uv build
