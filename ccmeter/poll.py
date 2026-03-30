@@ -10,6 +10,7 @@ import time
 import types
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from typing import Any
 
 from ccmeter.auth import Credentials, get_credentials
@@ -23,13 +24,21 @@ BUCKETS = ("five_hour", "seven_day", "seven_day_sonnet", "seven_day_opus", "seve
 _running = True
 
 
+@dataclass
+class PollResult:
+    data: dict[str, Any] | None = None
+    status: int = 0
+    retry_after: int | None = None
+    error: str = ""
+
+
 def _handle_signal(sig: int, frame: types.FrameType | None) -> None:
     global _running
     _running = False
     print("\nshutting down...")
 
 
-def fetch_usage(creds: Credentials) -> dict[str, Any] | None:
+def fetch_usage(creds: Credentials) -> PollResult:
     """Fetch current usage from Anthropic's OAuth endpoint."""
     req = urllib.request.Request(
         USAGE_URL,
@@ -40,10 +49,15 @@ def fetch_usage(creds: Credentials) -> dict[str, Any] | None:
     )
     try:
         resp = urllib.request.urlopen(req, timeout=10)
-        return json.loads(resp.read().decode())
+        return PollResult(data=json.loads(resp.read().decode()), status=resp.status)
+    except urllib.error.HTTPError as e:
+        retry_after = None
+        ra = e.headers.get("Retry-After") if e.headers else None
+        if ra and ra.isdigit():
+            retry_after = int(ra)
+        return PollResult(status=e.code, retry_after=retry_after, error=str(e))
     except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
-        print(f"usage API error: {e}", file=sys.stderr)
-        return None
+        return PollResult(error=str(e))
 
 
 def record_samples(
@@ -92,6 +106,25 @@ def seed_last_seen(conn: sqlite3.Connection) -> dict[str, float]:
     return last_seen
 
 
+def _next_delay(result: PollResult, interval: int, backoff: int) -> int:
+    """Decide how long to wait before next poll based on failure type."""
+    if result.data:
+        return interval
+
+    # 429: respect Retry-After or use short fixed delay (don't exponential backoff)
+    if result.status == 429:
+        if result.retry_after:
+            return min(result.retry_after, 120)
+        return min(interval, 60)
+
+    # 401/403: cred refresh will happen separately, short retry
+    if result.status in (401, 403):
+        return 30
+
+    # network/server errors: exponential backoff capped at 5m
+    return min(backoff * 2, 300)
+
+
 def run_poll(interval: int = 120, once: bool = False):
     """Main poll loop."""
     creds = get_credentials()
@@ -118,22 +151,34 @@ def run_poll(interval: int = 120, once: bool = False):
     backoff = interval
     consecutive_failures = 0
     while _running:
-        data = fetch_usage(creds)
-        if data:
-            last_seen = record_samples(data, last_seen, conn, tier=tier)
+        result = fetch_usage(creds)
+        if result.data:
+            last_seen = record_samples(result.data, last_seen, conn, tier=tier)
             backoff = interval
             consecutive_failures = 0
         else:
             consecutive_failures += 1
-            if consecutive_failures >= 3:
+
+            # auth failures: refresh immediately, don't wait for 3 strikes
+            if result.status in (401, 403):
                 refreshed = get_credentials()
                 if refreshed:
                     creds = refreshed
                     tier = creds.subscription_type or creds.rate_limit_tier
-                    print("  refreshed credentials from keychain")
+                    print("  refreshed credentials")
                     consecutive_failures = 0
-            backoff = min(backoff * 2, 600)
-            print(f"  backing off to {backoff}s", file=sys.stderr)
+            elif consecutive_failures >= 3:
+                refreshed = get_credentials()
+                if refreshed:
+                    creds = refreshed
+                    tier = creds.subscription_type or creds.rate_limit_tier
+                    print("  refreshed credentials (fallback)")
+                    consecutive_failures = 0
+
+            delay = _next_delay(result, interval, backoff)
+            backoff = delay
+            label = f" [{result.status}]" if result.status else ""
+            print(f"  retry in {delay}s{label}", file=sys.stderr)
 
         if once:
             break
