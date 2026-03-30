@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "ccmeter"
 dynamic = ["version"]
-description = "Reverse-engineer Anthropic's opaque Claude subscription limits into hard numbers"
+description = "Measure your actual Claude Code usage limits instead of guessing"
 authors = [{name = "Tyson Chan", email = "tyson.chan@proton.me"}]
 keywords = ["claude", "anthropic", "usage", "limits", "transparency", "metering"]
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: System :: Monitoring",
+    "Typing :: Typed",
 ]
 
 dependencies = [
