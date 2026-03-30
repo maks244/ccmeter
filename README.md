@@ -4,19 +4,21 @@ Measure what Anthropic won't tell you: what your Claude subscription limits actu
 
 ## Why
 
-Anthropic charges $20-$200/month for Claude but doesn't publish what the usage limits actually are. The API reports utilization as a percentage — but a percentage of what? Nobody knows.
+Anthropic charges $20-$200/month for Claude but won't say what the limits actually are. The API reports utilization as a percentage — but a percentage of *what*? Nobody knows.
 
-Twice in four months, Anthropic has run the same play: announce a temporary usage boost, silently tighten baseline limits during or after, then attribute complaints to "contrast effect." See [docs/evidence.md](docs/evidence.md) for the receipts.
+Twice in four months, Anthropic announced temporary usage boosts, then silently tightened baseline limits after. When users complained, the response was "contrast effect." See [docs/evidence.md](docs/evidence.md) for the receipts.
 
-ccmeter is a local instrument that figures out the actual numbers.
+Without hard numbers, users can't tell the difference between "I'm using more" and "they gave me less." ccmeter fixes that. If limits shrink, you'll see it — tokens-per-percent goes down, cost-per-percent goes down, and there's no way to hand-wave calibrated data.
+
+One person's data is a sample. Hundreds of people's data is leverage.
 
 ## How it works
 
-1. Polls Anthropic's OAuth usage API every 2 minutes — records utilization percentages per bucket (`five_hour`, `seven_day`, `seven_day_sonnet`, etc.)
-2. Scans Claude Code's local JSONL files for per-message token counts with timestamps
-3. When utilization ticks from 15% to 16% and you used N tokens in that window: 1% = N tokens
+1. **Poll**: records utilization percentages from Anthropic's OAuth usage API every 2 minutes per bucket (`five_hour`, `seven_day`, etc.)
+2. **Scan**: reads per-message token counts from Claude Code's local JSONL session logs
+3. **Calibrate**: when utilization ticks from 15% to 16% and you used N tokens in that window — 1% = N tokens, 1% = $X at API rates
 
-That's the whole trick. Track that number over time. If it shrinks, the cap shrank.
+Track those numbers over time. If tokens-per-percent drops, the cap shrank. Cost-per-percent gives you the dollar value of what each plan actually buys — comparable across users regardless of cache hit ratio.
 
 ## Install
 
@@ -78,9 +80,7 @@ ccmeter uninstall
 
 ## Help
 
-One person's data is a sample. Hundreds of people's data is leverage.
-
-The more users collecting data across different tiers (Pro, Max 5x, Max 20x) and models (Sonnet, Opus), the faster we can build a complete picture of what every plan actually gets you — and detect when it changes.
+The more users collecting data across different tiers (Pro, Max 5x, Max 20x) and models (Sonnet, Opus), the faster we can detect when limits change and map what every plan actually gets you.
 
 **Easiest way to help:** install it, let the daemon run, share your `ccmeter report` output.
 

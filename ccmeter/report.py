@@ -8,7 +8,7 @@ from ccmeter.db import connect
 from ccmeter.scan import scan
 
 # API pricing per MTok (USD). Used to compute cost-equivalent metrics.
-# Source: anthropic.com/pricing as of 2025-03.
+# Source: anthropic.com/pricing as of 2026-03.
 # Models not listed here fall back to the most expensive tier.
 PRICING = {
     "claude-opus-4-6": {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_create": 6.25},
